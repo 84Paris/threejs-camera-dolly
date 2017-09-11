@@ -2,7 +2,9 @@
  * @author DPR / http://ivxvixviii.io
  */
 
-THREE.CameraDolly = function ( camera, scene, points, gui ){
+import THREE from 'three';
+
+THREE.CameraDolly = function ( camera, scene, points, gui, debug ){
 
 	this.cameraPosition = 0;
 	this.lookatPosition = 0;
@@ -11,8 +13,11 @@ THREE.CameraDolly = function ( camera, scene, points, gui ){
 	this.scene 		  = scene;
 	this.cameraPoints = points.camera;
 	this.lookatPoints = points.lookat;
-	this.bounds 	  = 100;
+	this.bounds 	  = 400;
 	this.gui 		  = gui;
+	this.debug		  = debug;
+
+	this.createCurves = this.createCurves.bind(this);
 
 	// Lookat position Marker
 
@@ -23,9 +28,12 @@ THREE.CameraDolly = function ( camera, scene, points, gui ){
 	// Camera path markers
 	this.markers = [];
 
-	if(this.gui){
-		var cameraPointsFolder = this.gui.addFolder('cameraPointsFolder');
-		cameraPointsFolder.open();
+	if (this.gui){
+
+		this.gui.addGroup({
+			label: 'cameraPointsFolder',
+			enable: false
+		});
 	}
 
 	var _this = this;
@@ -34,19 +42,20 @@ THREE.CameraDolly = function ( camera, scene, points, gui ){
 
 		if(this.gui){
 			var point = this.cameraPoints[i];
+			point.range = [-this.bounds, this.bounds];
 
-			var folder = cameraPointsFolder.addFolder('marker-' + i);
-			folder.add(point, 'x', -this.bounds, this.bounds).onChange(function(){
-				_this.createCurves();
+			this.gui.addSubGroup({
+				label: 'marker-' + i
 			});
-			folder.add(point, 'y', -this.bounds, this.bounds).onChange(function(){
-				_this.createCurves();
+			this.gui.addSlider(point, 'x', 'range', {
+				onChange: _this.createCurves
 			});
-			folder.add(point, 'z', -this.bounds, this.bounds).onChange(function(){
-				_this.createCurves();
+			this.gui.addSlider(point, 'y', 'range', {
+				onChange: _this.createCurves
 			});
-
-			// folder.open();
+			this.gui.addSlider(point, 'z', 'range', {
+				onChange: _this.createCurves
+			});
 		}
 
 		var marker = this.createMarker(0x00FF00);
@@ -59,27 +68,31 @@ THREE.CameraDolly = function ( camera, scene, points, gui ){
 	this.lookatMarkers = [];
 
 	if(this.gui){
-		var lookatPointsFolder = this.gui.addFolder('lookatPointsFolder');
-		lookatPointsFolder.open();
+
+		this.gui.addGroup({
+			label: 'lookatPointsFolder',
+			enable: false
+		});
 	}
 
 	for( var i = 0; i < this.lookatPoints.length; ++i){
 
 		if(this.gui){
 			var point = this.lookatPoints[i];
+			point.range = [-this.bounds, this.bounds];
 
-			var folder = lookatPointsFolder.addFolder('marker-' + i);
-			folder.add(point, 'x', -this.bounds, this.bounds).onChange(function(){
-				_this.createCurves();
+			this.gui.addSubGroup({
+				label: 'marker-' + i
 			});
-			folder.add(point, 'y', -this.bounds, this.bounds).onChange(function(){
-				_this.createCurves();
+			this.gui.addSlider(point, 'x', 'range', {
+				onChange: _this.createCurves
 			});
-			folder.add(point, 'z', -this.bounds, this.bounds).onChange(function(){
-				_this.createCurves();
+			this.gui.addSlider(point, 'y', 'range', {
+				onChange: _this.createCurves
 			});
-
-			// folder.open();
+			this.gui.addSlider(point, 'z', 'range', {
+				onChange: _this.createCurves
+			});
 		}
 
 		var marker = this.createMarker(0x0000FF);
@@ -113,7 +126,9 @@ THREE.CameraDolly.prototype.createCurves = function(){
 	this.cameraSpline = this.createSpline(points);
 
 	var geometry = new THREE.Geometry();
-	var material = new THREE.LineBasicMaterial( 0xFFFFFF*Math.random() );
+	var material = new THREE.LineBasicMaterial({
+		color: this.debug ? '' : 0xFF0000
+	});
 
 	points.forEach(function(point){
 		geometry.vertices.push( point.clone() );
@@ -143,7 +158,9 @@ THREE.CameraDolly.prototype.createCurves = function(){
 	this.cameralookatSpline = this.createSpline(points);
 
 	var geometry = new THREE.Geometry();
-	var material = new THREE.LineBasicMaterial( 0xFFFFFF*Math.random() );
+	var material = new THREE.LineBasicMaterial({
+		color: this.debug ? '' : 0xFF0000
+	});
 
 	points.forEach(function(point){
 		geometry.vertices.push( point.clone() );
@@ -165,13 +182,17 @@ THREE.CameraDolly.prototype.createSpline = function( points ) {
 		tmp.push( points[i].clone() );
 	};
 
-	return new THREE.SplineCurve3( tmp );
+	return new THREE.CatmullRomCurve3( tmp );
 }
 
 THREE.CameraDolly.prototype.createMarker = function(color){
 	var geometry = new THREE.SphereGeometry( 1, 4, 4 );
 	var material = new THREE.MeshBasicMaterial({color: color});
-	return new THREE.Mesh(geometry, material);
+	var mesh = new THREE.Mesh(geometry, material);
+
+	if (this.debug) mesh.visible = false;
+
+	return mesh;
 };
 
 THREE.CameraDolly.prototype.update = function(){
